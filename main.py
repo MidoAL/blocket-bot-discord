@@ -43,3 +43,12 @@ if __name__ == "__main__":
             skicka_discord_meddelande(meddelande)
     else:
         print("Inga matchande annonser hittades.")
+if __name__ == "__main__":
+    skicka_discord_meddelande("🤖 Bot körs! Testmeddelande.")
+    resultat = hitta_annons_urler()
+    if resultat:
+        for titel, url in resultat:
+            meddelande = f"🚗 **Ny bil hittad!**\n{titel}\n🔗 {url}"
+            skicka_discord_meddelande(meddelande)
+    else:
+        print("Inga matchande annonser hittades.")
