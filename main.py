@@ -1,28 +1,27 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
 
-# ---- Inställningar ----
-KEYWORDS = ["rost", "obes", "felkod", "små fel", "småfel", "projekt", "besikt", "motorfel"]
 MAX_PRIS = 15000
 BLOCKET_URL = f"https://www.blocket.se/annonser/hela_sverige/fordon/bilar?cg=1020&st=s&ps=0&pe={MAX_PRIS}"
-
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 def hitta_annons_urler():
     response = requests.get(BLOCKET_URL, headers=HEADERS)
     soup = BeautifulSoup(response.text, "html.parser")
+
+    # Hitta alla annonser - här plockar vi länkar till bilarna
     annonser = soup.find_all("a", href=True)
 
-    matchningar = []
+    url_lista = []
     for annons in annonser:
-        text = annons.get_text().lower()
-        url = "https://www.blocket.se" + annons["href"]
-        if any(keyword in text for keyword in KEYWORDS):
-            matchningar.append((text.strip(), url))
+        href = annons["href"]
+        if "/annons/" in href:  # Säkra att det är en annons-länk
+            url = "https://www.blocket.se" + href
+            if url not in url_lista:
+                url_lista.append(url)
 
-    return matchningar
+    return url_lista
 
 def skicka_discord_meddelande(meddelande):
     webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
@@ -30,25 +29,13 @@ def skicka_discord_meddelande(meddelande):
         print("⚠️ Webhook-URL saknas!")
         return
 
-    data = {
-        "content": meddelande
-    }
+    data = {"content": meddelande}
     requests.post(webhook_url, json=data)
 
 if __name__ == "__main__":
-    resultat = hitta_annons_urler()
-    if resultat:
-        for titel, url in resultat:
-            meddelande = f"🚗 **Ny bil hittad!**\n{titel}\n🔗 {url}"
-            skicka_discord_meddelande(meddelande)
+    annonser = hitta_annons_urler()
+    if annonser:
+        for url in annonser:
+            skicka_discord_meddelande(f"🚗 Bil under 15 000 kr:\n{url}")
     else:
-        print("Inga matchande annonser hittades.")
-if __name__ == "__main__":
-    skicka_discord_meddelande("🤖 Bot körs! Testmeddelande.")
-    resultat = hitta_annons_urler()
-    if resultat:
-        for titel, url in resultat:
-            meddelande = f"🚗 **Ny bil hittad!**\n{titel}\n🔗 {url}"
-            skicka_discord_meddelande(meddelande)
-    else:
-        print("Inga matchande annonser hittades.")
+        print("Inga annonser hittades.")
